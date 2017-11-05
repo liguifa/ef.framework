@@ -45,4 +45,11 @@ namespace ef.framework {
             }
         }
     }
+
+    export function EFWidget():Function{
+        return function(constructor:Function){
+            framework.Bootstrap.GetInstance().Widget(constructor());
+            console.log(constructor());
+        }
+    }
 }

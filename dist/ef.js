@@ -86,8 +86,8 @@ var ef;
             Bootstrap.prototype.Controller = function (controller) {
                 this.Controllers.push(controller);
             };
-            Bootstrap.prototype.Service = function (service) {
-                framework.ServcieFactory.Register(service);
+            Bootstrap.prototype.Service = function (service, name) {
+                framework.ServiceFactory.Register(new framework.ServiceInJect(service, name));
             };
             Bootstrap.prototype.Start = function (self) {
                 self.Widgets.forEach(function (widget) { return widget.Start(); });
@@ -126,15 +126,12 @@ var ef;
                     var scope_1 = this.View();
                     this.Monitor.Watch(scope_1, function () {
                         var controllerElement = document.getElementsByTagName(self_1.Name)[0];
-                        var newControllerHTML = self_1.mTemplate.replace(/{{(.+?)}}/g, function (match, replaceStr) {
-                            return scope_1[replaceStr];
-                        });
-                        controllerElement.innerHTML = newControllerHTML;
+                        //let newControllerHTML = ServiceFactory.GetService<ef.service.ITemplateService>("ITemplateService").Compile(self.mTemplate,scope);
+                        framework.ServiceFactory.GetService("IDomService").Refresh(controllerElement, self_1.mTemplate, scope_1);
+                        //controllerElement.innerHTML = newControllerHTML;
                     });
                     var controllerElement = document.getElementsByTagName(this.Name)[0];
-                    var newControllerHTML = self_1.mTemplate.replace(/{{(.+?)}}/g, function (match, replaceStr) {
-                        return scope_1[replaceStr];
-                    });
+                    var newControllerHTML = framework.ServiceFactory.GetService("ITemplateService").Compile(self_1.mTemplate, scope_1);
                     controllerElement.innerHTML = newControllerHTML;
                 }
                 catch (e) {
@@ -144,6 +141,22 @@ var ef;
             return Controller;
         }());
         framework.Controller = Controller;
+        // export function Controller(name:string):Function{
+        //     return function(){
+        //     }
+        // }
+    })(framework = ef.framework || (ef.framework = {}));
+})(ef || (ef = {}));
+var ef;
+(function (ef) {
+    var framework;
+    (function (framework) {
+        var Ioc = /** @class */ (function () {
+            function Ioc() {
+            }
+            return Ioc;
+        }());
+        framework.Ioc = Ioc;
     })(framework = ef.framework || (ef.framework = {}));
 })(ef || (ef = {}));
 var ef;
@@ -196,11 +209,16 @@ var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var Service = /** @class */ (function () {
-            function Service() {
+        var _classPool = new Array();
+        function Service() {
+            var dependencies = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                dependencies[_i] = arguments[_i];
             }
-            return Service;
-        }());
+            return function (constructor) {
+                console.log(constructor);
+            };
+        }
         framework.Service = Service;
     })(framework = ef.framework || (ef.framework = {}));
 })(ef || (ef = {}));
@@ -208,25 +226,33 @@ var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var ServcieFactory = /** @class */ (function () {
-            function ServcieFactory() {
+        var ServiceFactory = /** @class */ (function () {
+            function ServiceFactory() {
             }
-            ServcieFactory.Register = function (service) {
+            ServiceFactory.Register = function (service) {
                 this.mServices.push(service);
             };
-            ServcieFactory.GetService = function () {
+            ServiceFactory.GetService = function (name) {
                 var services = this.mServices.filter(function (service) {
-                    return service != null;
+                    return service.Name == name;
                 });
                 if (services && services.length > 0) {
-                    return services[0];
+                    return services[0].Service;
                 }
                 return null;
             };
-            ServcieFactory.mServices = new Array();
-            return ServcieFactory;
+            ServiceFactory.mServices = new Array();
+            return ServiceFactory;
         }());
-        framework.ServcieFactory = ServcieFactory;
+        framework.ServiceFactory = ServiceFactory;
+        var ServiceInJect = /** @class */ (function () {
+            function ServiceInJect(service, name) {
+                this.Name = name;
+                this.Service = service;
+            }
+            return ServiceInJect;
+        }());
+        framework.ServiceInJect = ServiceInJect;
     })(framework = ef.framework || (ef.framework = {}));
 })(ef || (ef = {}));
 var ef;
@@ -274,20 +300,216 @@ var ef;
             return Widget;
         }());
         framework.Widget = Widget;
+        function EFWidget() {
+            return function (constructor) {
+                framework.Bootstrap.GetInstance().Widget(constructor());
+                console.log(constructor());
+            };
+        }
+        framework.EFWidget = EFWidget;
     })(framework = ef.framework || (ef.framework = {}));
 })(ef || (ef = {}));
+/// <reference path="../../framework/Service.ts" />
+/// <reference path="../../framework/Bootstrap.ts" />
+/// <reference path="../../framework/Ioc.ts" />
+/// <reference path="../template/ITemplateService.ts" />
+var ef;
+(function (ef) {
+    var service;
+    (function (service) {
+        var DomService = /** @class */ (function () {
+            function DomService() {
+            }
+            DomService.prototype.Refresh = function (element, template, scope) {
+                var innerHTML = ef.framework.ServiceFactory.GetService("ITemplateService").Compile(template, scope);
+                var velement = this.GenerateVirtualDOM(innerHTML);
+                this.PatchCommit(element, velement);
+            };
+            DomService.prototype.GenerateVirtualDOM = function (innerHTML) {
+                var virtualRoot = document.createElement("div");
+                virtualRoot.innerHTML = innerHTML;
+                return virtualRoot;
+            };
+            DomService.prototype.PatchCommit = function (element, velement) {
+                if (!/controller/g.test(element.tagName)) {
+                    if (element.nodeValue != velement.nodeValue) {
+                        element = velement;
+                        return;
+                    }
+                }
+                for (var i in element.childNodes) {
+                    this.PatchCommit(element.childNodes[i], velement.childNodes[i]);
+                }
+            };
+            return DomService;
+        }());
+        ef.framework.Bootstrap.GetInstance().Service(new DomService(), "IDomService");
+    })(service = ef.service || (ef.service = {}));
+})(ef || (ef = {}));
+var ef;
+(function (ef) {
+    var service;
+    (function (service) {
+        var Guid = /** @class */ (function () {
+            function Guid(id) {
+                this.Id = id;
+            }
+            Guid.prototype.ToString = function () {
+                if (this.Id) {
+                    return this.Id;
+                }
+                return null;
+            };
+            return Guid;
+        }());
+        service.Guid = Guid;
+    })(service = ef.service || (ef.service = {}));
+})(ef || (ef = {}));
+/// <reference path="../../framework/Service.ts" />
+/// <reference path="../../framework/Bootstrap.ts" />
+/// <reference path="../../framework/Ioc.ts" />
+var ef;
+(function (ef) {
+    var service;
+    (function (service) {
+        //@framework.Service("IGuidService")
+        var GuidService = /** @class */ (function () {
+            function GuidService() {
+            }
+            GuidService.prototype.NewGuid = function () {
+                var id = "";
+                var replaceIndxs = [8, 13, 18, 23];
+                var replaceIndex = 0;
+                for (var i = 0; i < 36; i++) {
+                    if (replaceIndxs.length >= replaceIndex) {
+                        if (i == replaceIndxs[replaceIndex]) {
+                            id += "-";
+                            replaceIndex++;
+                        }
+                        else {
+                            id += this.NewId();
+                        }
+                    }
+                    else {
+                        id += this.NewId();
+                    }
+                }
+                return new service.Guid(id);
+            };
+            GuidService.prototype.NewId = function () {
+                var max = 15;
+                var min = 0;
+                var guidStrs = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "A", "B", "C", "D", "E", "F"];
+                var index = parseInt((Math.random() * (max - min + 1) + min).toString(), 10);
+                return guidStrs[index];
+            };
+            return GuidService;
+        }());
+        ef.framework.Bootstrap.GetInstance().Service(new GuidService(), "IGuidService");
+    })(service = ef.service || (ef.service = {}));
+})(ef || (ef = {}));
+/// <reference path="../../framework/Service.ts" />
+/// <reference path="../../framework/Bootstrap.ts" />
+var ef;
+(function (ef) {
+    var service;
+    (function (service) {
+        var LogService = /** @class */ (function () {
+            function LogService() {
+            }
+            LogService.prototype.Error = function (log) {
+                var date = new Date().toLocaleTimeString();
+                console.error("Error " + date + " " + log);
+            };
+            LogService.prototype.Warn = function (log) {
+                var date = new Date().toLocaleTimeString();
+                console.warn("Warn " + date + " " + log);
+            };
+            LogService.prototype.Info = function (log) {
+                var date = new Date().toLocaleTimeString();
+                console.info("Info " + date + " " + log);
+            };
+            LogService.prototype.Debug = function (log) {
+                var date = new Date().toLocaleTimeString();
+                console.debug("Debug " + date + " " + log);
+            };
+            return LogService;
+        }());
+        ef.framework.Bootstrap.GetInstance().Service(new LogService(), "ILogService");
+    })(service = ef.service || (ef.service = {}));
+})(ef || (ef = {}));
+/// <reference path="../../framework/Service.ts" />
+/// <reference path="../../framework/Bootstrap.ts" />
+var ef;
+(function (ef) {
+    var service;
+    (function (service) {
+        var TemplateService = /** @class */ (function () {
+            function TemplateService() {
+            }
+            TemplateService.prototype.Compile = function (template, data) {
+                var functionBody = template.replace(/\r/g, function (match, replace) { return ""; })
+                    .replace(/\n/g, function (match, replace) { return ""; })
+                    .replace(/"/g, function (match, replace) { return "\""; })
+                    .replace(/{{(.+?)}}/g, function (match, replace) { return "'+data." + replace + "+'"; })
+                    .replace(/@{(.+?)}/g, function (match, replace) { return "';" + replace + " tpl += '"; });
+                functionBody = "var tpl = '" + functionBody + "';return tpl;";
+                return new Function("data", functionBody)(data);
+            };
+            return TemplateService;
+        }());
+        ef.framework.Bootstrap.GetInstance().Service(new TemplateService(), "ITemplateService");
+    })(service = ef.service || (ef.service = {}));
+})(ef || (ef = {}));
+/// <reference path="../../framework/Service.ts" />
+/// <reference path="../../framework/Bootstrap.ts" />
+var ef;
+(function (ef) {
+    var service;
+    (function (service) {
+        var WebSQLService = /** @class */ (function () {
+            function WebSQLService() {
+            }
+            WebSQLService.prototype.ExecCommand = function () {
+                return null;
+            };
+            return WebSQLService;
+        }());
+    })(service = ef.service || (ef.service = {}));
+})(ef || (ef = {}));
+/// <reference path="../../framework/Widget.ts" />
+/// <reference path="../../framework/Scope.ts" />
+/// <reference path="../../framework/Bootstrap.ts" />
 var ef;
 (function (ef) {
     var widget;
     (function (widget) {
+        //@framework.EFWidget()
         var EFButton = /** @class */ (function (_super) {
             __extends(EFButton, _super);
             function EFButton() {
-                return _super !== null && _super.apply(this, arguments) || this;
+                var _this = _super !== null && _super.apply(this, arguments) || this;
+                _this.Name = "ef-button";
+                _this.Template = "<button class=\"ef-button\">{{Text}}</button>";
+                return _this;
             }
+            EFButton.prototype.View = function () {
+                return new EFButtonScope();
+            };
+            EFButton.prototype.Link = function (scope, element) {
+            };
             return EFButton;
-        }(ef.
-        ));
+        }(ef.framework.Widget));
+        var EFButtonScope = /** @class */ (function (_super) {
+            __extends(EFButtonScope, _super);
+            function EFButtonScope() {
+                var _this = _super !== null && _super.apply(this, arguments) || this;
+                _this.Text = "GFLi";
+                return _this;
+            }
+            return EFButtonScope;
+        }(ef.framework.Scope));
+        ef.framework.Bootstrap.GetInstance().Widget(new EFButton());
     })(widget = ef.widget || (ef.widget = {}));
 })(ef || (ef = {}));
 var ef;
@@ -335,15 +557,20 @@ var ef;
             HomeController.prototype.View = function () {
                 var scope = new HomeScope();
                 scope.Name = "李贵发";
-                scope.Age = 24;
                 scope.Test = function () {
                     alert("test");
                 };
                 var i = 0;
+                scope.Age = "";
                 setInterval(function () {
-                    scope.Age = +i;
                     i++;
-                    ef.framework.ServcieFactory.GetService().Test();
+                    //ef.framework.ServcieFactory.GetService<ITestService>().Test();
+                    var id = ef.framework.ServiceFactory.GetService("IGuidService").NewGuid();
+                    ef.framework.ServiceFactory.GetService("ILogService").Error("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                    ef.framework.ServiceFactory.GetService("ILogService").Warn("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                    ef.framework.ServiceFactory.GetService("ILogService").Info("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                    ef.framework.ServiceFactory.GetService("ILogService").Debug("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                    scope.Age = id.ToString();
                 }, 2000);
                 return scope;
             };
@@ -363,17 +590,14 @@ var ef;
 (function (ef) {
     var test;
     (function (test) {
-        var TestService = /** @class */ (function (_super) {
-            __extends(TestService, _super);
+        var TestService = /** @class */ (function () {
             function TestService() {
-                return _super !== null && _super.apply(this, arguments) || this;
             }
             TestService.prototype.Test = function () {
                 console.log("Hello");
             };
             return TestService;
-        }(ef.framework.Service));
-        ef.framework.Bootstrap.GetInstance().Service(new TestService());
+        }());
     })(test = ef.test || (ef.test = {}));
 })(ef || (ef = {}));
 //# sourceMappingURL=ef.js.map

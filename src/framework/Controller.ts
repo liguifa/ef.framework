@@ -28,15 +28,12 @@ namespace ef.framework {
                 this.Monitor.Watch(scope,function()
                 {
                     let controllerElement = document.getElementsByTagName(self.Name)[0];
-                    let newControllerHTML = self.mTemplate.replace(/{{(.+?)}}/g,(match,replaceStr)=>{
-                        return scope[replaceStr];
-                    });
-                    controllerElement.innerHTML = newControllerHTML;
+                    //let newControllerHTML = ServiceFactory.GetService<ef.service.ITemplateService>("ITemplateService").Compile(self.mTemplate,scope);
+                    ServiceFactory.GetService<ef.service.IDomService>("IDomService").Refresh(controllerElement,self.mTemplate,scope);
+                    //controllerElement.innerHTML = newControllerHTML;
                 });
                 let controllerElement = document.getElementsByTagName(this.Name)[0];
-                let newControllerHTML = self.mTemplate.replace(/{{(.+?)}}/g,(match,replaceStr)=>{
-                    return scope[replaceStr];
-                });
+                let newControllerHTML = ServiceFactory.GetService<ef.service.ITemplateService>("ITemplateService").Compile(self.mTemplate,scope);
                 controllerElement.innerHTML = newControllerHTML;
             }
             catch(e)
@@ -47,4 +44,10 @@ namespace ef.framework {
 
         public abstract View():Scope;
     }
+
+    // export function Controller(name:string):Function{
+    //     return function(){
+
+    //     }
+    // }
 }

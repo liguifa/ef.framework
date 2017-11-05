@@ -24,8 +24,8 @@ namespace ef.framework {
             this.Controllers.push(controller);
         }
 
-        public Service(service:Service):void{
-            ServcieFactory.Register(service);
+        public Service(service:any,name:string):void{
+            ServiceFactory.Register(new ServiceInJect(service,name));
         }
 
         private Start(self:Bootstrap):void{
