@@ -1,5 +1,6 @@
 /// <reference path="../framework/Directive.ts" />
 /// <reference path="../framework/Scope.ts" />
+/// <reference path="../framework/Bootstrap.ts" />
 
 namespace ef.directive{
     class ClickDirective extends framework.Directive{
@@ -9,12 +10,16 @@ namespace ef.directive{
             return new ClickScope();
         }
 
-        public Link(scope:framework.Scope,element:Element):void{
-
+        public Link(dScope:framework.Scope,element:Element,attribute:Attr,scope:framework.Scope):void{
+            element.addEventListener("click",function(){
+                scope[attribute.value]();
+            })
         }
     }
 
     class ClickScope extends framework.Scope{
         
     }
+
+    framework.Bootstrap.GetInstance().Directive(new ClickDirective());
 }

@@ -33,8 +33,7 @@ namespace ef.framework {
                     //controllerElement.innerHTML = newControllerHTML;
                 });
                 let controllerElement = document.getElementsByTagName(this.Name)[0];
-                let newControllerHTML = ServiceFactory.GetService<ef.service.ITemplateService>("ITemplateService").Compile(self.mTemplate,scope);
-                controllerElement.innerHTML = newControllerHTML;
+                ServiceFactory.GetService<ef.service.IDomService>("IDomService").Render(controllerElement,self.mTemplate,scope);
             }
             catch(e)
             {

@@ -1,9 +1,10 @@
+/// <reference path="DirectiveFactory.ts" />
+
 namespace ef.framework {
     export class Bootstrap{
         private static mBootstrap:Bootstrap;
         private Widgets:Array<Widget> = new Array<Widget>();
         private Controllers:Array<Controller> = new Array<Controller>();
-
         private constructor(){
             let self = this;
             window.addEventListener("load",()=>self.Start(self));
@@ -26,6 +27,10 @@ namespace ef.framework {
 
         public Service(service:any,name:string):void{
             ServiceFactory.Register(new ServiceInJect(service,name));
+        }
+
+        public Directive(directive:Directive):void{
+            DirectiveFactory.Register(directive);
         }
 
         private Start(self:Bootstrap):void{

@@ -1,24 +1,13 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var Directive = /** @class */ (function () {
-            function Directive() {
+        class Directive {
+            Start(element, attribute, scope) {
+                let dScope = this.View();
+                this.Link(dScope, element, attribute, scope);
             }
-            Directive.prototype.Start = function () {
-            };
-            return Directive;
-        }());
+        }
         framework.Directive = Directive;
     })(framework = ef.framework || (ef.framework = {}));
 })(ef || (ef = {}));
@@ -26,120 +15,158 @@ var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var Scope = /** @class */ (function () {
-            function Scope() {
-            }
-            return Scope;
-        }());
+        class Scope {
+        }
         framework.Scope = Scope;
+    })(framework = ef.framework || (ef.framework = {}));
+})(ef || (ef = {}));
+var ef;
+(function (ef) {
+    var framework;
+    (function (framework) {
+        class DirectiveFactory {
+            static Exists(name) {
+                return this.mDirectives.filter(directive => directive.Name == name).length > 0;
+            }
+            static Register(directive) {
+                this.mDirectives.push(directive);
+            }
+            static GetDirective(name) {
+                return this.mDirectives.filter(directive => directive.Name == name)[0];
+            }
+        }
+        DirectiveFactory.mDirectives = new Array();
+        framework.DirectiveFactory = DirectiveFactory;
+    })(framework = ef.framework || (ef.framework = {}));
+})(ef || (ef = {}));
+/// <reference path="DirectiveFactory.ts" />
+var ef;
+(function (ef) {
+    var framework;
+    (function (framework) {
+        class Bootstrap {
+            constructor() {
+                this.Widgets = new Array();
+                this.Controllers = new Array();
+                let self = this;
+                window.addEventListener("load", () => self.Start(self));
+            }
+            static GetInstance() {
+                if (Bootstrap.mBootstrap == null) {
+                    Bootstrap.mBootstrap = new Bootstrap();
+                }
+                return Bootstrap.mBootstrap;
+            }
+            Widget(widget) {
+                this.Widgets.push(widget);
+            }
+            Controller(controller) {
+                this.Controllers.push(controller);
+            }
+            Service(service, name) {
+                framework.ServiceFactory.Register(new framework.ServiceInJect(service, name));
+            }
+            Directive(directive) {
+                framework.DirectiveFactory.Register(directive);
+            }
+            Start(self) {
+                self.Widgets.forEach(widget => widget.Start());
+                self.Controllers.forEach(cntroller => cntroller.Start());
+            }
+        }
+        framework.Bootstrap = Bootstrap;
     })(framework = ef.framework || (ef.framework = {}));
 })(ef || (ef = {}));
 /// <reference path="../framework/Directive.ts" />
 /// <reference path="../framework/Scope.ts" />
+/// <reference path="../framework/Bootstrap.ts" />
 var ef;
 (function (ef) {
     var directive;
     (function (directive) {
-        var ClickDirective = /** @class */ (function (_super) {
-            __extends(ClickDirective, _super);
-            function ClickDirective() {
-                var _this = _super !== null && _super.apply(this, arguments) || this;
-                _this.Name = "ef-click";
-                return _this;
+        class ClickDirective extends ef.framework.Directive {
+            constructor() {
+                super(...arguments);
+                this.Name = "ef-click";
             }
-            ClickDirective.prototype.View = function () {
+            View() {
                 return new ClickScope();
-            };
-            ClickDirective.prototype.Link = function (scope, element) {
-            };
-            return ClickDirective;
-        }(ef.framework.Directive));
-        var ClickScope = /** @class */ (function (_super) {
-            __extends(ClickScope, _super);
-            function ClickScope() {
-                return _super !== null && _super.apply(this, arguments) || this;
             }
-            return ClickScope;
-        }(ef.framework.Scope));
+            Link(dScope, element, attribute, scope) {
+                element.addEventListener("click", function () {
+                    scope[attribute.value]();
+                });
+            }
+        }
+        class ClickScope extends ef.framework.Scope {
+        }
+        ef.framework.Bootstrap.GetInstance().Directive(new ClickDirective());
+    })(directive = ef.directive || (ef.directive = {}));
+})(ef || (ef = {}));
+/// <reference path="../framework/Directive.ts" />
+/// <reference path="../framework/Scope.ts" />
+/// <reference path="../framework/Bootstrap.ts" />
+var ef;
+(function (ef) {
+    var directive;
+    (function (directive) {
+        class ValueDirective extends ef.framework.Directive {
+            constructor() {
+                super(...arguments);
+                this.Name = "ef-value";
+            }
+            View() {
+                return null;
+            }
+            Link(dScope, element, attribute, scope) {
+                element.addEventListener("input", function () {
+                    scope[attribute.value] = element.value;
+                });
+                let monitor = new ef.framework.Monitor();
+                element.value = scope[attribute.value];
+                monitor.Watch(scope[attribute.value], function () {
+                    element.attributes["value"].value = scope[attribute.value];
+                });
+            }
+        }
+        directive.ValueDirective = ValueDirective;
+        ef.framework.Bootstrap.GetInstance().Directive(new ValueDirective());
     })(directive = ef.directive || (ef.directive = {}));
 })(ef || (ef = {}));
 var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var Bootstrap = /** @class */ (function () {
-            function Bootstrap() {
-                this.Widgets = new Array();
-                this.Controllers = new Array();
-                var self = this;
-                window.addEventListener("load", function () { return self.Start(self); });
-            }
-            Bootstrap.GetInstance = function () {
-                if (Bootstrap.mBootstrap == null) {
-                    Bootstrap.mBootstrap = new Bootstrap();
+        class Controller {
+            get Monitor() {
+                if (this.mMonitor == null) {
+                    this.mMonitor = new framework.Monitor();
                 }
-                return Bootstrap.mBootstrap;
-            };
-            Bootstrap.prototype.Widget = function (widget) {
-                this.Widgets.push(widget);
-            };
-            Bootstrap.prototype.Controller = function (controller) {
-                this.Controllers.push(controller);
-            };
-            Bootstrap.prototype.Service = function (service, name) {
-                framework.ServiceFactory.Register(new framework.ServiceInJect(service, name));
-            };
-            Bootstrap.prototype.Start = function (self) {
-                self.Widgets.forEach(function (widget) { return widget.Start(); });
-                self.Controllers.forEach(function (cntroller) { return cntroller.Start(); });
-            };
-            return Bootstrap;
-        }());
-        framework.Bootstrap = Bootstrap;
-    })(framework = ef.framework || (ef.framework = {}));
-})(ef || (ef = {}));
-var ef;
-(function (ef) {
-    var framework;
-    (function (framework) {
-        var Controller = /** @class */ (function () {
-            function Controller() {
+                return this.mMonitor;
             }
-            Object.defineProperty(Controller.prototype, "Monitor", {
-                get: function () {
-                    if (this.mMonitor == null) {
-                        this.mMonitor = new framework.Monitor();
-                    }
-                    return this.mMonitor;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Controller.prototype.RecordTemplate = function () {
-                var controllerElement = document.getElementsByTagName(this.Name)[0];
+            RecordTemplate() {
+                let controllerElement = document.getElementsByTagName(this.Name)[0];
                 this.mTemplate = controllerElement.innerHTML;
-            };
-            Controller.prototype.Start = function () {
+            }
+            Start() {
                 try {
-                    var self_1 = this;
+                    let self = this;
                     this.RecordTemplate();
-                    var scope_1 = this.View();
-                    this.Monitor.Watch(scope_1, function () {
-                        var controllerElement = document.getElementsByTagName(self_1.Name)[0];
+                    let scope = this.View();
+                    this.Monitor.Watch(scope, function () {
+                        let controllerElement = document.getElementsByTagName(self.Name)[0];
                         //let newControllerHTML = ServiceFactory.GetService<ef.service.ITemplateService>("ITemplateService").Compile(self.mTemplate,scope);
-                        framework.ServiceFactory.GetService("IDomService").Refresh(controllerElement, self_1.mTemplate, scope_1);
+                        framework.ServiceFactory.GetService("IDomService").Refresh(controllerElement, self.mTemplate, scope);
                         //controllerElement.innerHTML = newControllerHTML;
                     });
-                    var controllerElement = document.getElementsByTagName(this.Name)[0];
-                    var newControllerHTML = framework.ServiceFactory.GetService("ITemplateService").Compile(self_1.mTemplate, scope_1);
-                    controllerElement.innerHTML = newControllerHTML;
+                    let controllerElement = document.getElementsByTagName(this.Name)[0];
+                    framework.ServiceFactory.GetService("IDomService").Render(controllerElement, self.mTemplate, scope);
                 }
                 catch (e) {
                     throw e;
                 }
-            };
-            return Controller;
-        }());
+            }
+        }
         framework.Controller = Controller;
         // export function Controller(name:string):Function{
         //     return function(){
@@ -151,11 +178,10 @@ var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var Ioc = /** @class */ (function () {
-            function Ioc() {
+        class Ioc {
+            constructor() {
             }
-            return Ioc;
-        }());
+        }
         framework.Ioc = Ioc;
     })(framework = ef.framework || (ef.framework = {}));
 })(ef || (ef = {}));
@@ -163,58 +189,51 @@ var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var Monitor = /** @class */ (function () {
-            function Monitor() {
+        class Monitor {
+            constructor() {
                 this.Masters = new Array();
             }
-            Monitor.prototype.Watch = function (watcher, func) {
-                var _this = this;
+            Watch(watcher, func) {
                 this.Record(watcher);
-                setInterval(function (d) {
-                    if (_this.Diff(watcher)) {
+                setInterval(d => {
+                    if (this.Diff(watcher)) {
                         func();
                     }
                 }, 100);
-            };
-            Monitor.prototype.Diff = function (watcher) {
-                for (var i in this.Masters) {
-                    var master = this.Masters[i];
-                    var newValue = watcher[master.Name];
+            }
+            Diff(watcher) {
+                for (let i in this.Masters) {
+                    let master = this.Masters[i];
+                    let newValue = watcher[master.Name];
                     if (newValue != master.Value) {
                         this.Record(watcher);
                         return true;
                     }
                 }
                 return false;
-            };
-            Monitor.prototype.Record = function (watcher) {
+            }
+            Record(watcher) {
                 this.Masters = new Array();
-                for (var i in watcher) {
+                for (let i in watcher) {
                     this.Masters.push(new Master(i, watcher[i]));
                 }
-            };
-            return Monitor;
-        }());
+            }
+        }
         framework.Monitor = Monitor;
-        var Master = /** @class */ (function () {
-            function Master(name, value) {
+        class Master {
+            constructor(name, value) {
                 this.Name = name;
                 this.Value = value;
             }
-            return Master;
-        }());
+        }
     })(framework = ef.framework || (ef.framework = {}));
 })(ef || (ef = {}));
 var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var _classPool = new Array();
-        function Service() {
-            var dependencies = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                dependencies[_i] = arguments[_i];
-            }
+        let _classPool = new Array();
+        function Service(...dependencies) {
             return function (constructor) {
                 console.log(constructor);
             };
@@ -226,32 +245,28 @@ var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var ServiceFactory = /** @class */ (function () {
-            function ServiceFactory() {
-            }
-            ServiceFactory.Register = function (service) {
+        class ServiceFactory {
+            static Register(service) {
                 this.mServices.push(service);
-            };
-            ServiceFactory.GetService = function (name) {
-                var services = this.mServices.filter(function (service) {
+            }
+            static GetService(name) {
+                let services = this.mServices.filter(service => {
                     return service.Name == name;
                 });
                 if (services && services.length > 0) {
                     return services[0].Service;
                 }
                 return null;
-            };
-            ServiceFactory.mServices = new Array();
-            return ServiceFactory;
-        }());
+            }
+        }
+        ServiceFactory.mServices = new Array();
         framework.ServiceFactory = ServiceFactory;
-        var ServiceInJect = /** @class */ (function () {
-            function ServiceInJect(service, name) {
+        class ServiceInJect {
+            constructor(service, name) {
                 this.Name = name;
                 this.Service = service;
             }
-            return ServiceInJect;
-        }());
+        }
         framework.ServiceInJect = ServiceInJect;
     })(framework = ef.framework || (ef.framework = {}));
 })(ef || (ef = {}));
@@ -259,46 +274,39 @@ var ef;
 (function (ef) {
     var framework;
     (function (framework) {
-        var Widget = /** @class */ (function () {
-            function Widget() {
+        class Widget {
+            get Monitor() {
+                if (this.mMonitor == null) {
+                    this.mMonitor = new framework.Monitor();
+                }
+                return this.mMonitor;
             }
-            Object.defineProperty(Widget.prototype, "Monitor", {
-                get: function () {
-                    if (this.mMonitor == null) {
-                        this.mMonitor = new framework.Monitor();
-                    }
-                    return this.mMonitor;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Widget.prototype.Start = function () {
-                var self = this;
-                var elements = document.getElementsByTagName(this.Name);
-                var scope = this.View();
-                this.Monitor.Watch(scope, function () {
-                    for (var key in elements) {
+            Start() {
+                let self = this;
+                let elements = document.getElementsByTagName(this.Name);
+                let scope = this.View();
+                this.Monitor.Watch(scope, () => {
+                    for (let key in elements) {
                         if (elements.hasOwnProperty(key)) {
                             var element = elements[key];
-                            var newHtml = self.Template.replace(/{{(.+?)}}/g, function (match, replaceStr) {
+                            let newHtml = self.Template.replace(/{{(.+?)}}/g, (match, replaceStr) => {
                                 return scope[replaceStr];
                             });
                             element.innerHTML = newHtml;
                         }
                     }
                 });
-                for (var key in elements) {
+                for (let key in elements) {
                     if (elements.hasOwnProperty(key)) {
                         var element = elements[key];
-                        var newHtml = self.Template.replace(/{{(.+?)}}/g, function (match, replaceStr) {
+                        let newHtml = self.Template.replace(/{{(.+?)}}/g, (match, replaceStr) => {
                             return scope[replaceStr];
                         });
                         element.innerHTML = newHtml;
                     }
                 }
-            };
-            return Widget;
-        }());
+            }
+        }
         framework.Widget = Widget;
         function EFWidget() {
             return function (constructor) {
@@ -317,51 +325,96 @@ var ef;
 (function (ef) {
     var service;
     (function (service) {
-        var DomService = /** @class */ (function () {
-            function DomService() {
-            }
-            DomService.prototype.Refresh = function (element, template, scope) {
-                var innerHTML = ef.framework.ServiceFactory.GetService("ITemplateService").Compile(template, scope);
-                var velement = this.GenerateVirtualDOM(innerHTML);
+        class DomService {
+            Refresh(element, template, scope) {
+                let innerHTML = ef.framework.ServiceFactory.GetService("ITemplateService").Compile(template, scope);
+                let velement = this.GenerateVirtualDOM(innerHTML);
                 this.PatchCommit(element, velement);
-            };
-            DomService.prototype.GenerateVirtualDOM = function (innerHTML) {
-                var virtualRoot = document.createElement("div");
+            }
+            Render(element, template, scope) {
+                let innerHTML = ef.framework.ServiceFactory.GetService("ITemplateService").Compile(template, scope);
+                let velement = this.GenerateVirtualDOM(innerHTML);
+                this.AllCommit(element, velement, scope);
+            }
+            GenerateVirtualDOM(innerHTML) {
+                let virtualRoot = document.createElement("div");
                 virtualRoot.innerHTML = innerHTML;
                 return virtualRoot;
-            };
-            DomService.prototype.PatchCommit = function (element, velement) {
-                if (!/controller/g.test(element.tagName)) {
-                    if (element.nodeValue != velement.nodeValue) {
-                        element = velement;
-                        return;
+            }
+            PatchCommit(element, velement) {
+                if (!/.*controller/g.test(element.tagName)) {
+                    //对比Attribute
+                    if (element.attributes) {
+                        for (let i in element.attributes) {
+                            let attribute = element.attributes[i];
+                            let vAttribute = velement.attributes[i];
+                            if (attribute.value != vAttribute.value) {
+                                attribute.value = vAttribute.value;
+                            }
+                        }
+                    }
+                    //对比Text
+                    if (!velement.nodeValue) {
+                        if (element.nodeValue != velement.nodeValue) {
+                            element.nodeValue = velement.nodeValue;
+                        }
+                    }
+                    else {
+                        element.nodeValue = velement.nodeValue;
                     }
                 }
-                for (var i in element.childNodes) {
+                for (let i in element.childNodes) {
                     this.PatchCommit(element.childNodes[i], velement.childNodes[i]);
                 }
-            };
-            return DomService;
-        }());
+            }
+            AllCommit(element, velement, scope) {
+                if (element.nodeType) {
+                    element.innerHTML = velement.innerHTML;
+                    if (!/.*controller/g.test(element.tagName)) {
+                        if (element.attributes) {
+                            for (let i in element.attributes) {
+                                let attribute = element.attributes[i];
+                                if (ef.framework.DirectiveFactory.Exists(attribute.name)) {
+                                    ef.framework.DirectiveFactory.GetDirective(attribute.name).Start(element, attribute, scope);
+                                }
+                            }
+                        }
+                    }
+                    for (let i in element.childNodes) {
+                        this.AllCommit(element.childNodes[i], velement.childNodes[i], scope);
+                    }
+                }
+            }
+        }
         ef.framework.Bootstrap.GetInstance().Service(new DomService(), "IDomService");
     })(service = ef.service || (ef.service = {}));
 })(ef || (ef = {}));
 var ef;
 (function (ef) {
+    var test;
+    (function (test) {
+        class TestService {
+            Test() {
+                console.log(`Hello`);
+            }
+        }
+    })(test = ef.test || (ef.test = {}));
+})(ef || (ef = {}));
+var ef;
+(function (ef) {
     var service;
     (function (service) {
-        var Guid = /** @class */ (function () {
-            function Guid(id) {
+        class Guid {
+            constructor(id) {
                 this.Id = id;
             }
-            Guid.prototype.ToString = function () {
+            ToString() {
                 if (this.Id) {
                     return this.Id;
                 }
                 return null;
-            };
-            return Guid;
-        }());
+            }
+        }
         service.Guid = Guid;
     })(service = ef.service || (ef.service = {}));
 })(ef || (ef = {}));
@@ -373,14 +426,12 @@ var ef;
     var service;
     (function (service) {
         //@framework.Service("IGuidService")
-        var GuidService = /** @class */ (function () {
-            function GuidService() {
-            }
-            GuidService.prototype.NewGuid = function () {
-                var id = "";
-                var replaceIndxs = [8, 13, 18, 23];
-                var replaceIndex = 0;
-                for (var i = 0; i < 36; i++) {
+        class GuidService {
+            NewGuid() {
+                let id = "";
+                let replaceIndxs = [8, 13, 18, 23];
+                let replaceIndex = 0;
+                for (let i = 0; i < 36; i++) {
                     if (replaceIndxs.length >= replaceIndex) {
                         if (i == replaceIndxs[replaceIndex]) {
                             id += "-";
@@ -395,17 +446,42 @@ var ef;
                     }
                 }
                 return new service.Guid(id);
-            };
-            GuidService.prototype.NewId = function () {
-                var max = 15;
-                var min = 0;
-                var guidStrs = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "A", "B", "C", "D", "E", "F"];
-                var index = parseInt((Math.random() * (max - min + 1) + min).toString(), 10);
+            }
+            NewId() {
+                let max = 15;
+                let min = 0;
+                let guidStrs = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "A", "B", "C", "D", "E", "F"];
+                let index = parseInt((Math.random() * (max - min + 1) + min).toString(), 10);
                 return guidStrs[index];
-            };
-            return GuidService;
-        }());
+            }
+        }
         ef.framework.Bootstrap.GetInstance().Service(new GuidService(), "IGuidService");
+    })(service = ef.service || (ef.service = {}));
+})(ef || (ef = {}));
+var ef;
+(function (ef) {
+    var service;
+    (function (service) {
+        class HttpService {
+            Get(url) {
+                return new Promise((resolve, reject) => {
+                    let xhr = new XMLHttpRequest();
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState == 4) {
+                            if (xhr.status == 200) {
+                                resolve(xhr.responseText);
+                            }
+                            else {
+                                reject();
+                            }
+                        }
+                    };
+                    xhr.open("Get", url, true);
+                    xhr.send(null);
+                });
+            }
+        }
+        ef.framework.Bootstrap.GetInstance().Service(new HttpService(), "IHttpService");
     })(service = ef.service || (ef.service = {}));
 })(ef || (ef = {}));
 /// <reference path="../../framework/Service.ts" />
@@ -414,27 +490,24 @@ var ef;
 (function (ef) {
     var service;
     (function (service) {
-        var LogService = /** @class */ (function () {
-            function LogService() {
+        class LogService {
+            Error(log) {
+                let date = new Date().toLocaleTimeString();
+                console.error(`Error ${date} ${log}`);
             }
-            LogService.prototype.Error = function (log) {
-                var date = new Date().toLocaleTimeString();
-                console.error("Error " + date + " " + log);
-            };
-            LogService.prototype.Warn = function (log) {
-                var date = new Date().toLocaleTimeString();
-                console.warn("Warn " + date + " " + log);
-            };
-            LogService.prototype.Info = function (log) {
-                var date = new Date().toLocaleTimeString();
-                console.info("Info " + date + " " + log);
-            };
-            LogService.prototype.Debug = function (log) {
-                var date = new Date().toLocaleTimeString();
-                console.debug("Debug " + date + " " + log);
-            };
-            return LogService;
-        }());
+            Warn(log) {
+                let date = new Date().toLocaleTimeString();
+                console.warn(`Warn ${date} ${log}`);
+            }
+            Info(log) {
+                let date = new Date().toLocaleTimeString();
+                console.info(`Info ${date} ${log}`);
+            }
+            Debug(log) {
+                let date = new Date().toLocaleTimeString();
+                console.debug(`Debug ${date} ${log}`);
+            }
+        }
         ef.framework.Bootstrap.GetInstance().Service(new LogService(), "ILogService");
     })(service = ef.service || (ef.service = {}));
 })(ef || (ef = {}));
@@ -444,20 +517,17 @@ var ef;
 (function (ef) {
     var service;
     (function (service) {
-        var TemplateService = /** @class */ (function () {
-            function TemplateService() {
-            }
-            TemplateService.prototype.Compile = function (template, data) {
-                var functionBody = template.replace(/\r/g, function (match, replace) { return ""; })
-                    .replace(/\n/g, function (match, replace) { return ""; })
-                    .replace(/"/g, function (match, replace) { return "\""; })
-                    .replace(/{{(.+?)}}/g, function (match, replace) { return "'+data." + replace + "+'"; })
-                    .replace(/@{(.+?)}/g, function (match, replace) { return "';" + replace + " tpl += '"; });
-                functionBody = "var tpl = '" + functionBody + "';return tpl;";
+        class TemplateService {
+            Compile(template, data) {
+                let functionBody = template.replace(/\r/g, (match, replace) => "")
+                    .replace(/\n/g, (match, replace) => "")
+                    .replace(/"/g, (match, replace) => "\"")
+                    .replace(/{{(.+?)}}/g, (match, replace) => `'+data.${replace}+'`)
+                    .replace(/@{(.+?)}/g, (match, replace) => `';${replace} tpl += '`);
+                functionBody = `var tpl = '${functionBody}';return tpl;`;
                 return new Function("data", functionBody)(data);
-            };
-            return TemplateService;
-        }());
+            }
+        }
         ef.framework.Bootstrap.GetInstance().Service(new TemplateService(), "ITemplateService");
     })(service = ef.service || (ef.service = {}));
 })(ef || (ef = {}));
@@ -467,14 +537,11 @@ var ef;
 (function (ef) {
     var service;
     (function (service) {
-        var WebSQLService = /** @class */ (function () {
-            function WebSQLService() {
-            }
-            WebSQLService.prototype.ExecCommand = function () {
+        class WebSQLService {
+            ExecCommand() {
                 return null;
-            };
-            return WebSQLService;
-        }());
+            }
+        }
     })(service = ef.service || (ef.service = {}));
 })(ef || (ef = {}));
 /// <reference path="../../framework/Widget.ts" />
@@ -485,30 +552,24 @@ var ef;
     var widget;
     (function (widget) {
         //@framework.EFWidget()
-        var EFButton = /** @class */ (function (_super) {
-            __extends(EFButton, _super);
-            function EFButton() {
-                var _this = _super !== null && _super.apply(this, arguments) || this;
-                _this.Name = "ef-button";
-                _this.Template = "<button class=\"ef-button\">{{Text}}</button>";
-                return _this;
+        class EFButton extends ef.framework.Widget {
+            constructor() {
+                super(...arguments);
+                this.Name = "ef-button";
+                this.Template = `<button class="ef-button">{{Text}}</button>`;
             }
-            EFButton.prototype.View = function () {
+            View() {
                 return new EFButtonScope();
-            };
-            EFButton.prototype.Link = function (scope, element) {
-            };
-            return EFButton;
-        }(ef.framework.Widget));
-        var EFButtonScope = /** @class */ (function (_super) {
-            __extends(EFButtonScope, _super);
-            function EFButtonScope() {
-                var _this = _super !== null && _super.apply(this, arguments) || this;
-                _this.Text = "GFLi";
-                return _this;
             }
-            return EFButtonScope;
-        }(ef.framework.Scope));
+            Link(scope, element) {
+            }
+        }
+        class EFButtonScope extends ef.framework.Scope {
+            constructor() {
+                super(...arguments);
+                this.Text = "GFLi";
+            }
+        }
         ef.framework.Bootstrap.GetInstance().Widget(new EFButton());
     })(widget = ef.widget || (ef.widget = {}));
 })(ef || (ef = {}));
@@ -516,30 +577,22 @@ var ef;
 (function (ef) {
     var test;
     (function (test) {
-        var Button = /** @class */ (function (_super) {
-            __extends(Button, _super);
-            function Button() {
-                var _this = _super !== null && _super.apply(this, arguments) || this;
-                _this.Name = "t-button";
-                _this.Template = "<button>{{Context}}</button>";
-                return _this;
+        class Button extends ef.framework.Widget {
+            constructor() {
+                super(...arguments);
+                this.Name = "t-button";
+                this.Template = "<button>{{Context}}</button>";
             }
-            Button.prototype.View = function () {
-                var scope = new ButtonScope();
+            View() {
+                let scope = new ButtonScope();
                 scope.Context = "Guifa Lee";
                 return scope;
-            };
-            Button.prototype.Link = function (scope, elemnt) {
-            };
-            return Button;
-        }(ef.framework.Widget));
-        var ButtonScope = /** @class */ (function (_super) {
-            __extends(ButtonScope, _super);
-            function ButtonScope() {
-                return _super !== null && _super.apply(this, arguments) || this;
             }
-            return ButtonScope;
-        }(ef.framework.Scope));
+            Link(scope, elemnt) {
+            }
+        }
+        class ButtonScope extends ef.framework.Scope {
+        }
         ef.framework.Bootstrap.GetInstance().Widget(new Button());
     })(test = ef.test || (ef.test = {}));
 })(ef || (ef = {}));
@@ -547,57 +600,39 @@ var ef;
 (function (ef) {
     var test;
     (function (test) {
-        var HomeController = /** @class */ (function (_super) {
-            __extends(HomeController, _super);
-            function HomeController() {
-                var _this = _super !== null && _super.apply(this, arguments) || this;
-                _this.Name = "home-controller";
-                return _this;
+        class HomeController extends ef.framework.Controller {
+            constructor() {
+                super(...arguments);
+                this.Name = "home-controller";
             }
-            HomeController.prototype.View = function () {
-                var scope = new HomeScope();
+            View() {
+                let scope = new HomeScope();
                 scope.Name = "李贵发";
                 scope.Test = function () {
-                    alert("test");
+                    alert("我是test方式");
                 };
-                var i = 0;
+                let i = 0;
                 scope.Age = "";
-                setInterval(function () {
-                    i++;
-                    //ef.framework.ServcieFactory.GetService<ITestService>().Test();
-                    var id = ef.framework.ServiceFactory.GetService("IGuidService").NewGuid();
-                    ef.framework.ServiceFactory.GetService("ILogService").Error("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
-                    ef.framework.ServiceFactory.GetService("ILogService").Warn("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
-                    ef.framework.ServiceFactory.GetService("ILogService").Info("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
-                    ef.framework.ServiceFactory.GetService("ILogService").Debug("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
-                    scope.Age = id.ToString();
-                }, 2000);
+                scope.Value = "MYYYY";
+                // setInterval(function(){
+                //     i++;
+                //     //ef.framework.ServcieFactory.GetService<ITestService>().Test();
+                //     let id = ef.framework.ServiceFactory.GetService<ef.service.IGuidService>("IGuidService").NewGuid();
+                //     // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Error("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                //     // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Warn("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                //     // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Info("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                //     // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Debug("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                //     scope.Age =  id.ToString();
+                // },2000)
+                ef.framework.ServiceFactory.GetService("IHttpService").Get("http://10.2.165.80:8090/test/test.html").then(function (data) {
+                    alert(data);
+                });
                 return scope;
-            };
-            return HomeController;
-        }(ef.framework.Controller));
-        var HomeScope = /** @class */ (function (_super) {
-            __extends(HomeScope, _super);
-            function HomeScope() {
-                return _super !== null && _super.apply(this, arguments) || this;
             }
-            return HomeScope;
-        }(ef.framework.Scope));
+        }
+        class HomeScope extends ef.framework.Scope {
+        }
         ef.framework.Bootstrap.GetInstance().Controller(new HomeController());
-    })(test = ef.test || (ef.test = {}));
-})(ef || (ef = {}));
-var ef;
-(function (ef) {
-    var test;
-    (function (test) {
-        var TestService = /** @class */ (function () {
-            function TestService() {
-            }
-            TestService.prototype.Test = function () {
-                console.log("Hello");
-            };
-            return TestService;
-        }());
     })(test = ef.test || (ef.test = {}));
 })(ef || (ef = {}));
 //# sourceMappingURL=ef.js.map

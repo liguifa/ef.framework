@@ -1,16 +1,22 @@
 declare namespace ef.framework {
     abstract class Directive {
-        protected abstract Name: string;
+        abstract Name: string;
         abstract View(): Scope;
-        abstract Link(scope: Scope, element: Element): void;
-        Start(): void;
+        abstract Link(dScope: Scope, element: Element, attribute: Attr, scope: framework.Scope): void;
+        Start(element: Element, attribute: Attr, scope: framework.Scope): void;
     }
 }
 declare namespace ef.framework {
     abstract class Scope {
     }
 }
-declare namespace ef.directive {
+declare namespace ef.framework {
+    class DirectiveFactory {
+        private static mDirectives;
+        static Exists(name: string): boolean;
+        static Register(directive: Directive): void;
+        static GetDirective(name: string): Directive;
+    }
 }
 declare namespace ef.framework {
     class Bootstrap {
@@ -22,7 +28,17 @@ declare namespace ef.framework {
         Widget(widget: Widget): void;
         Controller(controller: Controller): void;
         Service(service: any, name: string): void;
+        Directive(directive: Directive): void;
         private Start(self);
+    }
+}
+declare namespace ef.directive {
+}
+declare namespace ef.directive {
+    class ValueDirective extends framework.Directive {
+        Name: string;
+        View(): framework.Scope;
+        Link(dScope: framework.Scope, element: Element, attribute: Attr, scope: framework.Scope): void;
     }
 }
 declare namespace ef.framework {
@@ -86,6 +102,12 @@ declare namespace ef.service {
 declare namespace ef.service {
     interface IDomService {
         Refresh(element: Element, template: string, scope: framework.Scope): void;
+        Render(element: Element, template: string, scope: framework.Scope): void;
+    }
+}
+declare namespace ef.test {
+    interface ITestService {
+        Test(): void;
     }
 }
 declare namespace ef.service {
@@ -100,6 +122,13 @@ declare namespace ef.service {
 declare namespace ef.service {
     interface IGuidService {
         NewGuid(): Guid;
+    }
+}
+declare namespace ef.service {
+}
+declare namespace ef.service {
+    interface IHttpService {
+        Get(url: string): Promise<any>;
     }
 }
 declare namespace ef.service {
@@ -126,9 +155,4 @@ declare namespace ef.widget {
 declare namespace ef.test {
 }
 declare namespace ef.test {
-}
-declare namespace ef.test {
-    interface ITestService {
-        Test(): void;
-    }
 }
