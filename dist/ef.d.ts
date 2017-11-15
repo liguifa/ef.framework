@@ -35,6 +35,10 @@ declare namespace ef.framework {
 declare namespace ef.directive {
 }
 declare namespace ef.directive {
+}
+declare namespace ef.directive {
+}
+declare namespace ef.directive {
     class ValueDirective extends framework.Directive {
         Name: string;
         View(): framework.Scope;
@@ -105,11 +109,6 @@ declare namespace ef.service {
         Render(element: Element, template: string, scope: framework.Scope): void;
     }
 }
-declare namespace ef.test {
-    interface ITestService {
-        Test(): void;
-    }
-}
 declare namespace ef.service {
     class Guid {
         private Id;
@@ -142,6 +141,30 @@ declare namespace ef.service {
     }
 }
 declare namespace ef.service {
+    interface IResponsibilityChanService {
+        Start(name: string, scope: framework.Scope): void;
+        Register(name: string, nodeName: string, func: Function): void;
+        UnRegister(name: string, nodeName: string): void;
+    }
+}
+declare namespace ef.service {
+    class Responsibility {
+        private mName;
+        private mNodeName;
+        private mHandle;
+        private mNext;
+        private mPrevious;
+        constructor(name: string, nodeName: string, handle: Function);
+        readonly Name: string;
+        readonly NodeName: string;
+        readonly Handle: Function;
+        Next: Responsibility;
+        Previous: Responsibility;
+    }
+}
+declare namespace ef.service {
+}
+declare namespace ef.service {
 }
 declare namespace ef.service {
     interface IWebSQLService {
@@ -155,4 +178,9 @@ declare namespace ef.widget {
 declare namespace ef.test {
 }
 declare namespace ef.test {
+}
+declare namespace ef.test {
+    interface ITestService {
+        Test(): void;
+    }
 }

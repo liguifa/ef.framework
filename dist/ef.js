@@ -103,6 +103,70 @@ var ef;
         ef.framework.Bootstrap.GetInstance().Directive(new ClickDirective());
     })(directive = ef.directive || (ef.directive = {}));
 })(ef || (ef = {}));
+var ef;
+(function (ef) {
+    var directive;
+    (function (directive) {
+        class IfDirective extends ef.framework.Directive {
+            constructor() {
+                super(...arguments);
+                this.Name = "ef-if";
+            }
+            get Monitor() {
+                if (this.mMonitor == null) {
+                    this.mMonitor = new ef.framework.Monitor();
+                }
+                return this.mMonitor;
+            }
+            View() {
+                return new IfScope();
+            }
+            Link(dScope, element, attribute, scope) {
+                let self = this;
+                this.Monitor.Watch(scope, function () {
+                    let isShow = scope[attribute.value];
+                    self.Render(isShow, element);
+                });
+                this.mParentNode = element.parentElement;
+                this.mCurrentNode = element;
+            }
+            Render(isShow, element) {
+                if (isShow) {
+                    this.mParentNode.removeChild(element);
+                }
+                else {
+                    this.mParentNode.appendChild(this.mCurrentNode);
+                }
+            }
+        }
+        class IfScope extends ef.framework.Scope {
+        }
+        ef.framework.Bootstrap.GetInstance().Directive(new IfDirective());
+    })(directive = ef.directive || (ef.directive = {}));
+})(ef || (ef = {}));
+var ef;
+(function (ef) {
+    var directive;
+    (function (directive) {
+        class IncludeDirective extends ef.framework.Directive {
+            constructor() {
+                super(...arguments);
+                this.Name = "ef-include";
+            }
+            View() {
+                return null;
+            }
+            Link(dScope, element, attribute, scope) {
+                let path = attribute.value;
+                ef.framework.ServiceFactory.GetService("IHttpService").Get(path).then(function (html) {
+                    let node = ef.framework.ServiceFactory.GetService("ITemplateService").Compile(html, scope);
+                    element.innerHTML = node;
+                });
+            }
+        }
+        ef.framework.Bootstrap.GetInstance().Directive(new IncludeDirective());
+    })(directive = ef.directive || (ef.directive = {}));
+})(ef || (ef = {}));
 /// <reference path="../framework/Directive.ts" />
 /// <reference path="../framework/Scope.ts" />
 /// <reference path="../framework/Bootstrap.ts" />
@@ -391,17 +455,6 @@ var ef;
 })(ef || (ef = {}));
 var ef;
 (function (ef) {
-    var test;
-    (function (test) {
-        class TestService {
-            Test() {
-                console.log(`Hello`);
-            }
-        }
-    })(test = ef.test || (ef.test = {}));
-})(ef || (ef = {}));
-var ef;
-(function (ef) {
     var service;
     (function (service) {
         class Guid {
@@ -511,6 +564,106 @@ var ef;
         ef.framework.Bootstrap.GetInstance().Service(new LogService(), "ILogService");
     })(service = ef.service || (ef.service = {}));
 })(ef || (ef = {}));
+var ef;
+(function (ef) {
+    var service;
+    (function (service) {
+        class Responsibility {
+            constructor(name, nodeName, handle) {
+                this.mName = name;
+                this.mNodeName = nodeName;
+                this.mHandle = handle;
+            }
+            get Name() {
+                return this.mName;
+            }
+            get NodeName() {
+                return this.mNodeName;
+            }
+            get Handle() {
+                return this.mHandle;
+            }
+            get Next() {
+                return this.mNext;
+            }
+            set Next(value) {
+                this.mNext = value;
+            }
+            get Previous() {
+                return this.mPrevious;
+            }
+            set Previous(value) {
+                this.mPrevious = value;
+            }
+        }
+        service.Responsibility = Responsibility;
+    })(service = ef.service || (ef.service = {}));
+})(ef || (ef = {}));
+var ef;
+(function (ef) {
+    var service;
+    (function (service) {
+        class ResponsibilityChanService {
+            constructor() {
+                this.mRootResponsibilityPool = new Array();
+            }
+            static GetInstance() {
+                if (ResponsibilityChanService.mResponsibilityChanService == null) {
+                    ResponsibilityChanService.mResponsibilityChanService = new ResponsibilityChanService();
+                }
+                return ResponsibilityChanService.mResponsibilityChanService;
+            }
+            Start(name, scope) {
+                let rootResponsibility = this.mRootResponsibilityPool.find(d => d.Name == name);
+                let currentResponsibility = rootResponsibility;
+                while (currentResponsibility) {
+                    if (currentResponsibility.Handle(scope)) {
+                        break;
+                    }
+                    currentResponsibility = currentResponsibility.Next;
+                }
+            }
+            Register(name, nodeName, func) {
+                let responsibility = new service.Responsibility(name, nodeName, func);
+                let rootResponsibility = this.mRootResponsibilityPool.find(d => d.Name == responsibility.Name);
+                if (!rootResponsibility) {
+                    this.mRootResponsibilityPool.push(responsibility);
+                }
+                else {
+                    let leafResponsibility = this.GetLeafResponsibility(rootResponsibility);
+                    leafResponsibility.Next = responsibility;
+                    responsibility.Previous = leafResponsibility;
+                }
+            }
+            UnRegister(name, nodeName) {
+                let rootResponsibility = this.mRootResponsibilityPool.find(d => d.Name == name);
+                let currentResponsibility = rootResponsibility;
+                if (!currentResponsibility) {
+                    return;
+                }
+                while (currentResponsibility != null) {
+                    if (currentResponsibility.NodeName == nodeName) {
+                        break;
+                    }
+                    currentResponsibility = currentResponsibility.Next;
+                }
+                if (currentResponsibility.NodeName == nodeName) {
+                    currentResponsibility.Previous.Next = currentResponsibility.Next;
+                    currentResponsibility.Next = null;
+                    currentResponsibility.Previous = null;
+                }
+            }
+            GetLeafResponsibility(root) {
+                let currentResponsibility = root;
+                while (currentResponsibility.Next != null) {
+                    currentResponsibility = currentResponsibility.Next;
+                }
+                return currentResponsibility;
+            }
+        }
+        ef.framework.Bootstrap.GetInstance().Service(ResponsibilityChanService.GetInstance(), "IResponsibilityChanService");
+    })(service = ef.service || (ef.service = {}));
+})(ef || (ef = {}));
 /// <reference path="../../framework/Service.ts" />
 /// <reference path="../../framework/Bootstrap.ts" />
 var ef;
@@ -614,16 +767,37 @@ var ef;
                 let i = 0;
                 scope.Age = "";
                 scope.Value = "MYYYY";
-                // setInterval(function(){
-                //     i++;
-                //     //ef.framework.ServcieFactory.GetService<ITestService>().Test();
-                //     let id = ef.framework.ServiceFactory.GetService<ef.service.IGuidService>("IGuidService").NewGuid();
-                //     // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Error("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
-                //     // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Warn("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
-                //     // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Info("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
-                //     // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Debug("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
-                //     scope.Age =  id.ToString();
-                // },2000)
+                scope.IsPhone = true;
+                setInterval(function () {
+                    i++;
+                    //ef.framework.ServcieFactory.GetService<ITestService>().Test();
+                    let id = ef.framework.ServiceFactory.GetService("IGuidService").NewGuid();
+                    // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Error("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                    // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Warn("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                    // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Info("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                    // ef.framework.ServiceFactory.GetService<ef.service.ILogService>("ILogService").Debug("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT");
+                    scope.Age = id.ToString();
+                    scope.IsPhone = !scope.IsPhone;
+                }, 2000);
+                ef.framework.ServiceFactory.GetService("IResponsibilityChanService").Register("sla.get.online.commit", "doc", function (scope) {
+                    let filename = scope["file"];
+                    if (/\.doc/.test(filename)) {
+                        alert("doc");
+                        return true;
+                    }
+                    return false;
+                });
+                ef.framework.ServiceFactory.GetService("IResponsibilityChanService").Register("sla.get.online.commit", "ppt", function (scope) {
+                    let filename = scope["file"];
+                    if (/\.ppt/.test(filename)) {
+                        alert("ppt");
+                        return true;
+                    }
+                    return false;
+                });
+                let rScope = new HomeScope();
+                rScope["file"] = "xxxx.ppt";
+                ef.framework.ServiceFactory.GetService("IResponsibilityChanService").Start("sla.get.online.commit", rScope);
                 ef.framework.ServiceFactory.GetService("IHttpService").Get("http://10.2.165.80:8090/test/test.html").then(function (data) {
                     alert(data);
                 });
@@ -633,6 +807,17 @@ var ef;
         class HomeScope extends ef.framework.Scope {
         }
         ef.framework.Bootstrap.GetInstance().Controller(new HomeController());
+    })(test = ef.test || (ef.test = {}));
+})(ef || (ef = {}));
+var ef;
+(function (ef) {
+    var test;
+    (function (test) {
+        class TestService {
+            Test() {
+                console.log(`Hello`);
+            }
+        }
     })(test = ef.test || (ef.test = {}));
 })(ef || (ef = {}));
 //# sourceMappingURL=ef.js.map
